@@ -1,0 +1,51 @@
+import requests
+import csv
+import pandas as pd
+
+# API endpoint and your API key
+api_url = "https://api.hunter.io/v2/domain-search"
+api_key = "YOUR_API_KEY"  # Replace with your actual API key
+
+# Input and output file paths
+input_csv_path = "/Users/rentsher/Desktop/domain_urls.csv"
+output_csv_path = "/Users/rentsher/Desktop/domain_data_output.csv"
+
+# Read the input CSV file containing domain URLs
+df = pd.read_csv(input_csv_path)
+
+# Define the parameters you want to save in CSV, including "emails"
+parameters_to_save = ["domain", "organization", "description", "industry", "twitter", "facebook", "linkedin", "instagram", "youtube", "technologies", "country", "emails"]
+
+# Create an empty list to store the results
+results = []
+
+# Iterate over the domain URLs and fetch data
+for domain_url in df["Domain URL"]:
+    params = {
+        "domain": domain_url,
+        "api_key": api_key
+    }
+
+    # Send a GET request to the API
+    response = requests.get(api_url, params=params)
+
+    if response.status_code == 200:
+        data = response.json().get("data", {})
+
+        # Extract email addresses from the "emails" list and join them into a string
+        emails = ", ".join([email["value"] for email in data.get("emails", [])])
+
+        # Append the data to the results list
+        data_to_save = {param: data[param] for param in parameters_to_save if param != "emails"}
+        data_to_save["emails"] = emails
+        results.append(data_to_save)
+    else:
+        print(f"Failed to fetch data for {domain_url}")
+
+# Convert the list of dictionaries into a DataFrame
+result_df = pd.DataFrame(results)
+
+# Save the data to an output CSV file
+result_df.to_csv(output_csv_path, index=False, quoting=csv.QUOTE_NONNUMERIC)
+
+print(f"Data saved to {output_csv_path}")
